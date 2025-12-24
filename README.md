@@ -3,7 +3,7 @@
 An AI-powered tool that detects re-uploads, edited copies, and similar videos on YouTube using advanced computer vision and natural language processing.
 
 ## SPECIAL NOTE
-I would love u to read a special.txt file which carries the journey as well as bottleneck of this project and the solution
+I would love u to read a CHALLENGES_FACED_MUST_READ.txt file which carries the journey as well as bottleneck of this project and the solution
 
 ## 📋 Overview
 
