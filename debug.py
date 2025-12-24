@@ -53,7 +53,7 @@ def test_direct_url():
 
     frames_captured = 0
     # Try reading 5 frames
-    for i in range(5):
+    for i in range(7):
         ret, frame = cap.read()
         if ret:
             frames_captured += 1
