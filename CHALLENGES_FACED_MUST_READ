@@ -1,0 +1,62 @@
+# 🛠️ Engineering Journey & Technical Decisions
+
+This document outlines the thought process, challenges faced, and architectural pivots made during the development of this Video Relationship Classifier. It documents the transition from a naive initial approach to the optimized final solution.
+
+## 1. Initial Architecture & The "Naive" Approach
+**The Plan:**
+My initial strategy was maximizing data granularity. The pipeline was designed to:
+1.  Download the full source video.
+2.  Extract 7-10 frames and store them in a Vector Database.
+3.  Perform a YouTube search using mixed keywords from metadata to find ~20 candidate videos.
+4.  Filter candidates based on Title Similarity, Channel Name, and Thumbnail analysis.
+5.  **Bottle-neck:** Download *all* candidate videos to extract frames for deep visual similarity search using CLIP.
+6.  Pass the aggregated data to an LLM for final classification.
+
+**The Reality Check:**
+* **Latency:** The "download-first" approach resulted in a processing time of **5+ minutes per query**. This was unacceptable for a real-time or near real-time application.
+* **Resource Intensity:** Storing full videos and processing high-res frames was computationally expensive.
+
+## 2. Optimization Phase: The Pivot to Speed
+To reduce latency from 5 minutes to **1.5 - 2 minutes**, I refactored the pipeline:
+* **Smart Frame Extraction:** Instead of downloading entire videos, I implemented a function to stream/seek specific timestamps.
+* **Sparse Sampling:** I restricted the input to the 7 most relevant frames. These are embedded instantaneously, bypassing the need for heavy local storage.
+* **Impact:** Drastic reduction in I/O operations and network overhead.
+
+## 3. Technical Challenges & Debugging
+
+### 🎥 The FFmpeg vs. CLIP Dimension Mismatch
+**Issue:** I encountered a tensor dimension mismatch when feeding frames into the CLIP model. FFmpeg was extracting frames at native resolution (often 1080p), while the embedding model expected lower dimensions (typically 224px or 480px).
+**Solution:** I implemented a preprocessing step to resize and normalize frames on the fly before embedding, ensuring compatibility between the extraction layer and the inference layer.
+
+### 🔊 The Audio Analysis Trade-off
+**The Idea:** I initially planned to transcribe audio to detect script similarities (e.g., matching spoken words in re-uploads).
+** The Blocker:** The most robust libraries for this required a complex Node.js ecosystem setup or heavy Python dependencies that were failing in the local environment.
+**Decision:** Given the internship assignment timeline, I made a pragmatic engineering decision to **deprioritize audio**.
+* *Rationale:* Spending hours debugging environment issues risked missing the submission deadline.
+
+## 4. Refining the AI Pipeline (LangGraph)
+
+### LLM Determinism
+**Issue:** The LLM occasionally returned conversational text alongside the requested JSON, breaking the parsing logic.
+**Solution:**
+1.  **Prompt Engineering:** Enforced strict JSON output constraints.
+2.  **Sanitization Layer:** Added a regex cleaner to strip Markdown code blocks (```json) before parsing.
+
+### Workflow Orchestration
+I utilized **LangGraph** to manage the application state. This allows the system to:
+* **Prepare Data:** Initialize state and pointers.
+* **Classify:** Iterate through video pairs.
+* **Fallback:** If the LLM API fails or times out, a deterministic algorithm (based on math thresholds) takes over to ensure the user always gets a result.
+
+## 5. Future Roadmap & Scalability
+While the current MVP is functional and optimized for a single thread, I have identified key areas for the next iteration:
+
+### ⚡ Parallelization (Workers)
+* **Current State:** The pipeline processes the selected 4-5 candidate videos sequentially (Extraction → Classification → Next Video). This creates blocking I/O.
+* **Upgrade Plan:** Implement asynchronous workers (using `asyncio` or `Celery`) to extract frames and classify all candidate videos in parallel. This would reduce the total processing time from ~2 minutes to nearly the time of a single video (O(1) vs O(n)).
+
+### 🎚️ Prompt Optimization
+* Refine the Gemini system prompts to better handle edge cases (e.g., "Reaction Videos" vs. "Re-uploads") and output more granular confidence scores.
+
+### 🔉 Audio Fingerprinting
+* Revisit the audio layer to implement spectral fingerprinting. This is the "missing piece" that would allow the system to detect videos that have been visually altered (cropped/filtered) but retain the original audio track.
