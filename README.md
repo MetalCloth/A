@@ -2,6 +2,9 @@
 
 An AI-powered tool that detects re-uploads, edited copies, and similar videos on YouTube using advanced computer vision and natural language processing.
 
+## SPECIAL NOTE
+I would love u to read a special.txt file which carries the journey as well as bottleneck of this project and the solution
+
 ## 📋 Overview
 
 This application analyzes YouTube videos to identify potential duplicates, re-uploads, or edited versions by comparing visual content, titles, and metadata. It uses CLIP embeddings for visual similarity, text embeddings for semantic comparison, and an optional LLM-based classification agent for intelligent categorization.
